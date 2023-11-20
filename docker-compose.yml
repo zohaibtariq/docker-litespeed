@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  litespeed-php:
+    container_name: lsphp
+    build:
+      context: .
+    restart: always
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./laravel:/var/www/html
+      - ./litespeed-config/httpd.conf:/usr/local/lsws/conf/httpd.conf
+      - ./litespeed-config/vhosts/laravel.conf:/usr/local/lsws/conf/vhosts/laravel.conf
+      - ./litespeed-config/httpd_config.conf:/usr/local/lsws/conf/httpd_config.conf
+#      - ./laravel/storage:/var/www/html/storage
+#      - ./laravel/bootstrap/cache:/var/www/html/bootstrap/cache
+      - ./litespeed-logs:/usr/local/lsws/logs
+    logging:
+      driver: "json-file"  # Choose a suitable logging driver
+      options:
+        max-size: "10m"  # Set maximum log file size
+        max-file: "30"   # Set the maximum number of log files
+
+  mongodb:
+    container_name: lsmongo
+    image: mongo:latest
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_DATABASE: laravel
+    volumes:
+      - mongodb-data:/data/db
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "30"
+
+  redis:
+    container_name: lsredis
+    image: redis:latest
+    restart: always
+    volumes:
+      - redis-data:/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "30"
+
+  # Command to back up data
+  backup:
+    container_name: lsbackup
+    image: busybox
+    volumes:
+      - ./backup:/backup
+    command: tar czvf /backup/backup.tar.gz /var/www/html/storage /data/db /data
+
+  # Command to restore data
+  restore:
+    container_name: lsrestore
+    image: busybox
+    volumes:
+      - ./backup:/backup
+    command: tar xzvf /backup/backup.tar.gz -C /
+
+volumes:
+  mongodb-data:
+  redis-data:
+  litespeed-logs:
