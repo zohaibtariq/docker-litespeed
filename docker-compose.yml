@@ -7,6 +7,7 @@ services:
       context: .
     restart: always
     ports:
+      - "7080:7080"
       - "8080:80"
       - "8443:443"
     volumes:
